@@ -5,21 +5,180 @@ output:
     keep_md: true
 ---
 
+## Introduction
 
-## Loading and preprocessing the data
+It is now possible to collect a large amount of data about personal
+movement using activity monitoring devices such as a
+[Fitbit](http://www.fitbit.com), [Nike
+Fuelband](http://www.nike.com/us/en_us/c/nikeplus-fuelband), or
+[Jawbone Up](https://jawbone.com/up). These type of devices are part of
+the "quantified self" movement -- a group of enthusiasts who take
+measurements about themselves regularly to improve their health, to
+find patterns in their behavior, or because they are tech geeks. But
+these data remain under-utilized both because the raw data are hard to
+obtain and there is a lack of statistical methods and software for
+processing and interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring
+device. This device collects data at 5 minute intervals through out the
+day. The data consists of two months of data from an anonymous
+individual collected during the months of October and November, 2012
+and include the number of steps taken in 5 minute intervals each day.
+
+## Data
+
+The data for this assignment can be downloaded from the course web
+site:
+
+* Dataset: [Activity monitoring data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip) [52K]
+
+The variables included in this dataset are:
+
+* **steps**: Number of steps taking in a 5-minute interval (missing
+    values are coded as `NA`)
+
+* **date**: The date on which the measurement was taken in YYYY-MM-DD
+    format
+
+* **interval**: Identifier for the 5-minute interval in which
+    measurement was taken
 
 
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
+The dataset is stored in a comma-separated-value (CSV) file and there
+are a total of 17,568 observations in this
+dataset.
 
 
-
-## Imputing missing values
-
+## Assignment
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+### Loading and preprocessing the data
+
+Show any code that is needed to
+
+1. Load the data
+
+   ```{r}
+   filename <- "activity.csv"
+   activity_df <- read.csv(filename, stringsAsFactors = FALSE)
+   ```
+
+2. No additional processing/transforming of the data was done at this time
+
+   ```{r}
+   library(dplyr)
+   library(ggplot2)
+   ```
+
+### What is mean total number of steps taken per day?
+
+For this part of the assignment, the missing values in the dataset were ignored
+
+1. This is a histogram of the total number of steps taken each day
+   
+   ```{r}
+     sum_steps_per_day <- activity_df %>%
+     group_by(date) %>%
+     filter(!is.na(steps)) %>%
+     summarise(sum_per_day = sum(steps, rm.na = TRUE))
+     bins <- seq(from=min(sum_steps_per_day$sum_per_day),
+                 to=max(sum_steps_per_day$sum_per_day + 1000),
+                 by=1000)
+     hist(sum_steps_per_day$sum_per_day,
+        breaks=bins,
+        xlab="Number of Steps",
+        col = "red",
+        main="Steps per Day")
+    ```
+
+2. This is the **mean** and **median** respectively for the total number of steps taken per day
+
+   ```{r}
+     mean(sum_steps_per_day$sum_per_day)
+     median(sum_steps_per_day$sum_per_day)
+   ```
+
+### What is the average daily activity pattern?
+
+1. This is a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+   ```{r}
+   mean_steps_per_int <- activity_df %>%
+   group_by(interval) %>%
+   filter(!is.na(steps)) %>%
+   summarise(mean_per_int = mean(steps))
+   mean_steps_per_int$Time <- sprintf("%02d:%02d",
+                                   mean_steps_per_int$interval %/% 100,
+                                   mean_steps_per_int$interval %% 100)
+   c <- ggplot(mean_steps_per_int,
+               aes(group = 1, y = mean_per_int, x = Time))
+   c <- c + geom_point(size = 1.5) + geom_line(col = "red")
+   c + labs(y="Mean Steps per Interval",
+            title="Average Daily Activity Pattern")
+   ```
+
+2. This is the 5-minute interval, on average across all the days in the dataset that contains the maximum number of steps
+
+   ```{r}
+   mean_steps_per_int$Time[max(mean_steps_per_int$mean_per_int)]
+   ```
+
+### Imputing missing values
+
+There are a number of days/intervals where there are missing
+values (coded as `NA`). The presence of missing days may introduce
+bias into some calculations or summaries of the data.
+
+1. This is the total number of missing values in the dataset (i.e. the total number of rows with `NA`s)
+
+   ```{r}
+   nrow(count_of_NA <- activity_df %>% filter(is.na(steps)))
+   ```
+
+2. The strategy for filling in all of the missing values in the dataset was to replace then with mean for that 5-minute interval.
+
+
+3. This new dataset is equal to the original dataset but with the missing data filled in.
+
+   ```{r}
+   while (nrow(count_of_NA <- activity_df %>% filter(is.na(steps))) != 0) {
+     activity_df$steps[which(is.na(activity_df$steps))] <-
+       mean_steps_per_int$mean_per_int[
+         mean_steps_per_int$interval ==
+         activity_df$interval[which(is.na(activity_df$steps))]]
+   }
+   activity_df$steps <- round(activity_df$steps)
+   ```
+
+4. This is a histogram of the total number of steps taken each day and Calculate 
+
+   ```{r}
+   sum_steps_per_day <- activity_df %>%
+     group_by(date) %>%
+     filter(!is.na(steps)) %>%
+     summarise(sum_per_day = sum(steps, rm.na = TRUE))
+   bins <- seq(from=min(sum_steps_per_day$sum_per_day),
+               to=max(sum_steps_per_day$sum_per_day + 1000),
+               by=1000)
+   hist(sum_steps_per_day$sum_per_day,
+        breaks=bins,
+        xlab="Number of Steps",
+        col = "red",
+        main="Steps per Day")
+   ```
+
+5. This is the **mean** and **median** respectively of ther total number of steps taken per day. 
+
+   ```{r}
+   mean(sum_steps_per_day$sum_per_day)
+   median(sum_steps_per_day$sum_per_day)
+   ```
+
+6. These values **do not** differ from the estimates from the first part of the assignment since the mean values were used to replace the **NAs** the mean and medain remained the same.
+
+
+### Are there differences in activity patterns between weekdays and weekends?
+
+Not done at this time
+
+
